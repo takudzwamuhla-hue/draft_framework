@@ -2,16 +2,16 @@
 AI-Powered Risk Management Dashboard — Beverage Production Line
 NUST MEng Research · Mark Mbewe (N02534127N) · Supervisor: Eng T. Muhla
 
-Advanced Real-Time Version: Features a 1s auto-refreshing simulation engine, 
-historical statistical learning, Gaussian random walk drifts, and full-scale 
-time-series tracking for all 6 machines.
+Advanced Real-Time Version: Built completely with native Streamlit components.
+Features a 1s native refresh loop, historical statistical learning, Gaussian 
+random walk drifts, and full-scale time-series tracking for all 6 machines.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
+import time
 from datetime import datetime
-from streamlit_autorefresh import st_autorefresh
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -22,10 +22,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# Trigger automatic rerun every 1000 milliseconds (1 second)
-# This drives the live clock and the rolling simulation pipeline.
-refresh_count = st_autorefresh(interval=1000, key="prod_line_refresh")
 
 # ─────────────────────────────────────────────
 # GLOBAL DARK THEME CSS
@@ -101,7 +97,6 @@ except Exception as e:
 # ─────────────────────────────────────────────
 # SIMULATION ENGINE (STATE PRESERVATION)
 # ─────────────────────────────────────────────
-# Initialize rolling session memory for up to 60 historical ticks
 MAX_HISTORY = 60
 
 if "sim_history" not in st.session_state:
@@ -154,7 +149,7 @@ with col_title:
     st.caption("NUST MEng Research • Candidate: Mark Mbewe (N02534127N) • Supervisor: Eng T. Muhla")
 
 with col_clock:
-    # Dynamic live ticking display updating every second via autorefresh
+    # Dynamic live ticking display using system time
     current_time = datetime.now()
     st.markdown(f"""
     <div style="text-align: right; background: #0f1b2d; padding: 10px; border-radius: 6px; border: 1px solid #1a3050;">
@@ -172,7 +167,6 @@ st.divider()
 # ─────────────────────────────────────────────
 st.subheader("🏭 Live Machine Telemetry & Real-Time Drifts")
 
-# Iteratively render UI layers across columns for all 6 target manufacturing blocks
 m_list = list(MACHINE_COLUMNS.keys())
 
 def render_machine_block(machine_name):
@@ -185,11 +179,9 @@ def render_machine_block(machine_name):
     
     for idx, col in enumerate(metrics):
         with metric_cols[idx]:
-            # Clean variable label display
             display_label = col.replace(machine_name.lower().replace(" ", "_") + "_", "").replace("_", " ").title()
             val = latest_metrics[col]
             
-            # Simple color threshold validation based on historical bounds
             hist_meta = historical_stats[machine_name][col]
             is_anomaly = val > hist_meta["max"] or val < hist_meta["min"]
             val_color = "#ff4b4b" if is_anomaly else "#00e676"
@@ -235,3 +227,10 @@ st.markdown("---")
 with st.expander("📊 Live Simulation Buffer Explorer"):
     st.markdown("This dataframe showcases the active rolling memory buffer currently managing the Gaussian Random Walk changes.")
     st.dataframe(df_sim, use_container_width=True)
+
+# ─────────────────────────────────────────────
+# NATIVE RERUN LOOP CONTROLLER
+# ─────────────────────────────────────────────
+# Sleep for 1 second, then issue a native rerun command to cycle the state engine
+time.sleep(1.0)
+st.rerun()
